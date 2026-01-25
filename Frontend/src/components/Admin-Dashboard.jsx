@@ -15,38 +15,28 @@ import { useNavigate } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
 import { API_ENDPOINTS } from "../config/api";
 
-// ✅ Added "All" and "Rejected"
-const statuses = ["All", "Pending", "In Progress", "Resolved", "Rejected"];
+const statuses = ["Pending", "In Progress", "Resolved"];
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const [reports, setReports] = useState([]);
-  const [filter, setFilter] = useState("All"); // ✅ Default = All
+  const [filter, setFilter] = useState("Pending");
   const [editingReport, setEditingReport] = useState(null);
   const [statusUpdate, setStatusUpdate] = useState("");
   const [adminMessageUpdate, setAdminMessageUpdate] = useState("");
   const [modalPhoto, setModalPhoto] = useState(null);
 
-  // 🔥 FETCH FROM SERVER
   const fetchComplaints = async () => {
     try {
       const token = localStorage.getItem("token");
       if (!token) throw new Error("No admin token found!");
 
       const res = await fetch(API_ENDPOINTS.COMPLAINTS, {
-  headers: { 
-    Authorization: `Bearer ${token}`,
-    "Cache-Control": "no-cache",
-  },
-  cache: "no-store",   // 🔥 THIS IS THE KEY
-  });
-
-
-      if (res.ok) {
-        setReports(data.complaints || []);
-      } else {
-        toast.error(data.message || "Failed to fetch complaints");
-      }
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok) setReports(data.complaints);
+      else toast.error(data.message || "Failed to fetch complaints");
     } catch (err) {
       console.error(err);
       toast.error(err.message || "Server error");
@@ -63,8 +53,6 @@ const AdminDashboard = () => {
         return "bg-green-100 text-green-700 border-green-300";
       case "In Progress":
         return "bg-yellow-100 text-yellow-700 border-yellow-300";
-      case "Rejected":
-        return "bg-red-100 text-red-700 border-red-300";
       default:
         return "bg-blue-100 text-blue-700 border-blue-300";
     }
@@ -76,89 +64,72 @@ const AdminDashboard = () => {
         return <CheckCircle className="w-4 h-4" />;
       case "In Progress":
         return <Clock className="w-4 h-4" />;
-      case "Rejected":
-        return <X className="w-4 h-4" />;
       default:
         return <FileText className="w-4 h-4" />;
     }
   };
 
-  // ✅ UPDATE STATUS
   const handleUpdate = async (reportId) => {
-  if (!statusUpdate) {
-    toast.error("Status is required!");
-    return;
-  }
-
-  try {
-    const token = localStorage.getItem("token");
-
-    const res = await fetch(API_ENDPOINTS.COMPLAINT_BY_ID(reportId), {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        status: statusUpdate,
-        adminMessage: adminMessageUpdate,
-      }),
-    });
-
-    const data = await res.json();
-
-    if (res.ok) {
-      toast.success("Report updated successfully!");
-
-      // 🔥 Force fresh data from DB
-      await fetchComplaints();
-
-      // 🔥 Close edit modal
-      setEditingReport(null);
-      setStatusUpdate("");
-      setAdminMessageUpdate("");
-
-      // 🔥 DO NOT change filter here
-      // User can manually click tab
-    } else {
-      toast.error(data.message || "Update failed");
+    if (!statusUpdate) {
+      toast.error("Status is required!");
+      return;
     }
-  } catch (err) {
-    console.error(err);
-    toast.error("Server error");
-  }
-};
 
-
-  // ✅ DELETE
-  const handleDelete = async (reportId) => {
     try {
       const token = localStorage.getItem("token");
-
       const res = await fetch(API_ENDPOINTS.COMPLAINT_BY_ID(reportId), {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          status: statusUpdate,
+          adminMessage: adminMessageUpdate,
+        }),
       });
 
       const data = await res.json();
-
       if (res.ok) {
-        toast.success("Report deleted");
-        await fetchComplaints();
-      } else {
-        toast.error(data.message || "Delete failed");
-      }
+        toast.success("Report updated successfully!");
+        setReports((prev) =>
+          prev.map((r) =>
+            r._id === reportId
+              ? { ...r, status: statusUpdate, adminMessage: adminMessageUpdate }
+              : r
+          )
+        );
+        setEditingReport(null);
+        setStatusUpdate("");
+        setAdminMessageUpdate("");
+      } else toast.error(data.message || "Update failed");
     } catch (err) {
       console.error(err);
       toast.error("Server error");
     }
   };
 
-  // ✅ FIXED FILTER LOGIC
-  const filteredReports =
-    filter === "All"
-      ? reports
-      : reports.filter((r) => (r.status || "Pending") === filter);
+  const handleDelete = async (reportId) => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(API_ENDPOINTS.COMPLAINT_BY_ID(reportId), {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setReports((prev) => prev.filter((r) => r._id !== reportId));
+        toast.success("Report deleted");
+      } else toast.error(data.message || "Delete failed");
+    } catch (err) {
+      console.error(err);
+      toast.error("Server error");
+    }
+  };
+
+  const filteredReports = reports.filter(
+    (r) => (r.status || "Pending") === filter
+  );
 
   return (
     <motion.div
@@ -294,13 +265,11 @@ const AdminDashboard = () => {
                       onChange={(e) => setStatusUpdate(e.target.value)}
                     >
                       <option value="">Select status</option>
-                      {statuses
-                        .filter((s) => s !== "All")
-                        .map((s) => (
-                          <option key={s} value={s}>
-                            {s}
-                          </option>
-                        ))}
+                      {statuses.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
                     </select>
                     <div className="flex justify-end gap-2">
                       <button
@@ -347,7 +316,7 @@ const AdminDashboard = () => {
               No Reports Found
             </h2>
             <p className="text-gray-500 mt-1 text-sm">
-              No complaints in this category.
+              All reports have been resolved or none exist yet.
             </p>
           </div>
         )}
