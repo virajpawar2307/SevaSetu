@@ -1,40 +1,23 @@
-import nodemailer from "nodemailer";
-import dotenv from "dotenv";
+import { Resend } from "resend";
 
-dotenv.config();
-
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false, // MUST be false for port 587
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS, // Gmail App Password
-  },
-  tls: {
-    rejectUnauthorized: false,
-  },
-});
-
-// Test connection
-transporter.verify((err, success) => {
-  if (err) {
-    console.error("❌ Mail server connection failed:", err);
-  } else {
-    console.log("✅ Mail server is ready to send emails");
-  }
-});
+const resend = new Resend(re_GvRhfY8x_28pkQes4pHV7huVQ1Ft7hkLE);
 
 export const sendEmail = async (to, subject, html) => {
   try {
-    await transporter.sendMail({
-      from: `"SevaSetu Support" <${process.env.EMAIL_USER}>`,
+    const { data, error } = await resend.emails.send({
+      from: "SevaSetu <onboarding@resend.dev>",
       to,
       subject,
       html,
     });
-    console.log(`📧 Email sent to ${to}`);
-  } catch (error) {
-    console.error("❌ Error sending email:", error);
+
+    if (error) {
+      console.error("❌ Email sending failed:", error);
+      return;
+    }
+
+    console.log("✅ Email sent successfully. ID:", data.id);
+  } catch (err) {
+    console.error("❌ Email sending crashed:", err);
   }
 };
