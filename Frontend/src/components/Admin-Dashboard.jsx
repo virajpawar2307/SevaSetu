@@ -15,7 +15,6 @@ import { useNavigate } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
 import { API_ENDPOINTS } from "../config/api";
 
-// ✅ Added "All" and "Rejected"
 const statuses = ["All", "Pending", "In Progress", "Resolved", "Rejected"];
 
 const AdminDashboard = () => {
@@ -27,21 +26,17 @@ const AdminDashboard = () => {
   const [adminMessageUpdate, setAdminMessageUpdate] = useState("");
   const [modalPhoto, setModalPhoto] = useState(null);
 
-  // 🔥 FETCH FROM SERVER (NO CACHE)
+  // ================= FETCH =================
   const fetchComplaints = async () => {
     try {
       const token = localStorage.getItem("token");
-      if (!token) throw new Error("No admin token found!");
+      if (!token) throw new Error("No token");
 
       const res = await fetch(API_ENDPOINTS.COMPLAINTS, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Cache-Control": "no-cache",
-        },
-        cache: "no-store",
+        headers: { Authorization: `Bearer ${token}` },
       });
 
-      const data = await res.json(); // ✅ THIS WAS MISSING
+      const data = await res.json();
 
       if (res.ok) {
         setReports(data.complaints || []);
@@ -50,7 +45,7 @@ const AdminDashboard = () => {
       }
     } catch (err) {
       console.error("Fetch error:", err);
-      toast.error(err.message || "Server error");
+      toast.error("Server error");
     }
   };
 
@@ -58,6 +53,7 @@ const AdminDashboard = () => {
     fetchComplaints();
   }, []);
 
+  // ================= UI HELPERS =================
   const getStatusStyle = (status) => {
     switch (status) {
       case "Resolved":
@@ -84,7 +80,7 @@ const AdminDashboard = () => {
     }
   };
 
-  // ✅ UPDATE STATUS
+  // ================= UPDATE =================
   const handleUpdate = async (reportId) => {
     if (!statusUpdate) {
       toast.error("Status is required!");
@@ -99,9 +95,7 @@ const AdminDashboard = () => {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
-          "Cache-Control": "no-cache",
         },
-        cache: "no-store",
         body: JSON.stringify({
           status: statusUpdate,
           adminMessage: adminMessageUpdate,
@@ -111,10 +105,20 @@ const AdminDashboard = () => {
       const data = await res.json();
 
       if (res.ok) {
-        toast.success("Report updated successfully!");
+        toast.success("Report updated!");
 
-        // 🔥 RELOAD FROM DB
-        await fetchComplaints();
+        // 🔥 INSTANT UI UPDATE (NO REFETCH)
+        setReports((prev) =>
+          prev.map((r) =>
+            r._id === reportId
+              ? {
+                  ...r,
+                  status: statusUpdate,
+                  adminMessage: adminMessageUpdate,
+                }
+              : r
+          )
+        );
 
         setEditingReport(null);
         setStatusUpdate("");
@@ -123,45 +127,44 @@ const AdminDashboard = () => {
         toast.error(data.message || "Update failed");
       }
     } catch (err) {
-      console.error("Update error:", err);
+      console.error(err);
       toast.error("Server error");
     }
   };
 
-  // ✅ DELETE
+  // ================= DELETE =================
   const handleDelete = async (reportId) => {
     try {
       const token = localStorage.getItem("token");
 
       const res = await fetch(API_ENDPOINTS.COMPLAINT_BY_ID(reportId), {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Cache-Control": "no-cache",
-        },
-        cache: "no-store",
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       const data = await res.json();
 
       if (res.ok) {
-        toast.success("Report deleted");
-        await fetchComplaints();
+        toast.success("Deleted");
+
+        // 🔥 INSTANT UI REMOVE
+        setReports((prev) => prev.filter((r) => r._id !== reportId));
       } else {
         toast.error(data.message || "Delete failed");
       }
     } catch (err) {
-      console.error("Delete error:", err);
+      console.error(err);
       toast.error("Server error");
     }
   };
 
-  // ✅ FILTER
+  // ================= FILTER =================
   const filteredReports =
     filter === "All"
       ? reports
       : reports.filter((r) => (r.status || "Pending") === filter);
 
+  // ================= UI =================
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -176,58 +179,114 @@ const AdminDashboard = () => {
           localStorage.removeItem("token");
           navigate("/");
         }}
-        className="fixed top-6 right-6 px-5 py-2 bg-gradient-to-r from-pink-500 via-red-500 to-orange-400 text-white font-semibold rounded-full flex items-center gap-2 shadow-lg hover:opacity-90 transition-all"
+        className="fixed top-6 right-6 px-5 py-2 bg-gradient-to-r from-pink-500 via-red-500 to-orange-400 text-white font-semibold rounded-full flex items-center gap-2 shadow-lg hover:opacity-90"
       >
         <LogOut size={18} /> Logout
       </button>
 
       {/* Header */}
-      <div className="flex flex-col items-center mb-12 text-center">
-        <h1 className="text-4xl md:text-5xl font-extrabold text-gray-800 tracking-tight mb-2">
-          Admin Dashboard
-        </h1>
-        <p className="text-gray-500 max-w-2xl">
-          Manage and update user-reported issues efficiently.
-        </p>
+      <div className="text-center mb-10">
+        <h1 className="text-4xl font-extrabold">Admin Dashboard</h1>
+        <p className="text-gray-500">Manage complaints</p>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="flex justify-center mb-12 gap-4 flex-wrap">
+      {/* Tabs */}
+      <div className="flex justify-center gap-3 mb-10 flex-wrap">
         {statuses.map((s) => (
-          <motion.button
+          <button
             key={s}
             onClick={() => setFilter(s)}
-            whileTap={{ scale: 0.95 }}
-            className={`px-5 py-2.5 rounded-full font-semibold shadow-md transition-all ${
+            className={`px-4 py-2 rounded-full font-semibold ${
               filter === s
-                ? "bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white shadow-lg"
-                : "bg-white/70 text-gray-700 hover:bg-gray-100"
+                ? "bg-gradient-to-r from-indigo-500 to-pink-500 text-white"
+                : "bg-white"
             }`}
           >
             {s}
-          </motion.button>
+          </button>
         ))}
       </div>
 
-      {/* Reports Grid */}
-      <div className="max-w-7xl mx-auto grid gap-10 sm:grid-cols-2 xl:grid-cols-3 place-items-center">
+      {/* Cards */}
+      <div className="max-w-7xl mx-auto grid gap-8 sm:grid-cols-2 xl:grid-cols-3">
         {filteredReports.length > 0 ? (
           filteredReports.map((report) => (
-            <div key={report._id} className="w-full">
-              {/* YOUR UI CARD CODE REMAINS SAME */}
-              {/* (No need to change anything below) */}
+            <div key={report._id} className="bg-white p-6 rounded-xl shadow">
+              <div
+                className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm border ${getStatusStyle(
+                  report.status
+                )}`}
+              >
+                {getStatusIcon(report.status)} {report.status}
+              </div>
+
+              <h3 className="font-bold text-lg mt-3">
+                {report.description}
+              </h3>
+
+              <p className="text-sm mt-2">Category: {report.category}</p>
+              <p className="text-sm">Area: {report.area}</p>
+
+              <p className="mt-3 text-sm">
+                Admin: {report.adminMessage || "No message"}
+              </p>
+
+              {editingReport === report._id ? (
+                <>
+                  <textarea
+                    className="w-full border mt-3 p-2"
+                    value={adminMessageUpdate}
+                    onChange={(e) =>
+                      setAdminMessageUpdate(e.target.value)
+                    }
+                  />
+                  <select
+                    className="w-full border mt-2 p-2"
+                    value={statusUpdate}
+                    onChange={(e) => setStatusUpdate(e.target.value)}
+                  >
+                    <option value="">Select status</option>
+                    {statuses
+                      .filter((s) => s !== "All")
+                      .map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                  </select>
+                  <button
+                    onClick={() => handleUpdate(report._id)}
+                    className="mt-2 w-full bg-green-500 text-white p-2 rounded"
+                  >
+                    Save
+                  </button>
+                </>
+              ) : (
+                <div className="flex gap-2 mt-4">
+                  <button
+                    onClick={() => {
+                      setEditingReport(report._id);
+                      setStatusUpdate(report.status);
+                      setAdminMessageUpdate(report.adminMessage || "");
+                    }}
+                    className="flex-1 bg-blue-500 text-white p-2 rounded"
+                  >
+                    Update
+                  </button>
+                  <button
+                    onClick={() => handleDelete(report._id)}
+                    className="flex-1 bg-red-500 text-white p-2 rounded"
+                  >
+                    Delete
+                  </button>
+                </div>
+              )}
             </div>
           ))
         ) : (
-          <div className="flex flex-col items-center justify-center py-32 text-center">
-            <FileText className="w-14 h-14 text-gray-400 mb-4" />
-            <h2 className="text-2xl font-semibold text-gray-700">
-              No Reports Found
-            </h2>
-            <p className="text-gray-500 mt-1 text-sm">
-              No complaints in this category.
-            </p>
-          </div>
+          <p className="text-center col-span-full text-gray-500">
+            No complaints
+          </p>
         )}
       </div>
     </motion.div>
