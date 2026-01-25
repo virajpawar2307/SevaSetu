@@ -58,8 +58,12 @@ const AuthPage = () => {
         localStorage.setItem("token", data.token);
         localStorage.setItem("user", JSON.stringify(data.user));
 
-        toast.success("✅ Account created & logged in!");
-        navigate("/dashboard");
+        toast.success(isSignup ? "✅ Account created!" : "✅ Logged in!");
+
+setTimeout(() => {
+  navigate("/dashboard");
+}, 800); // wait 0.8 sec so toast is visible
+
         setLoading(false);
         return;
       }
