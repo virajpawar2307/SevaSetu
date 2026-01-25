@@ -30,9 +30,7 @@ const AuthPage = () => {
     }
 
     try {
-      const url = isSignup
-        ? API_ENDPOINTS.REGISTER
-        : API_ENDPOINTS.LOGIN;
+      const url = isSignup ? API_ENDPOINTS.REGISTER : API_ENDPOINTS.LOGIN;
 
       const body = isSignup
         ? {
@@ -57,8 +55,19 @@ const AuthPage = () => {
 
       if (!res.ok) throw new Error(data.message || "Something went wrong");
 
-      // Admin login blocked on user page
-      if (!isSignup && data.user.isAdmin) {
+      // =========================
+      // ✅ SIGNUP FLOW
+      // =========================
+      if (isSignup) {
+        toast.success("✅ Account created! Please login.");
+        setIsSignup(false); // 🔥 Switch to Sign In
+        return;
+      }
+
+      // =========================
+      // ✅ LOGIN FLOW
+      // =========================
+      if (data.user.isAdmin) {
         toast.error("❌ Admin cannot login here! Use Admin Login page.");
         return;
       }
@@ -66,8 +75,8 @@ const AuthPage = () => {
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
 
-      toast.success(isSignup ? "✅ Account created!" : "✅ Logged in!");
-      navigate(isSignup ? "/dashboard" : "/dashboard"); // redirect to user dashboard
+      toast.success("✅ Logged in successfully!");
+      navigate("/dashboard");
     } catch (err) {
       console.error("Auth error:", err);
       toast.error(err.message);
@@ -86,14 +95,13 @@ const AuthPage = () => {
           backgroundSize: "cover",
           backgroundPosition: "center",
           opacity: 0.05,
-          filter: "brightness(1.2)",
         }}
       />
 
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
+        transition={{ duration: 0.6 }}
         className="relative z-10 w-full max-w-md bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl p-8 md:p-12 border border-gray-100"
       >
         <div className="flex mb-8 bg-gray-100 rounded-full p-1">
@@ -101,8 +109,8 @@ const AuthPage = () => {
             onClick={() => setIsSignup(false)}
             className={`flex-1 py-2 rounded-full text-sm font-semibold transition ${
               !isSignup
-                ? "bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md"
-                : "text-gray-600 hover:text-gray-900"
+                ? "bg-gradient-to-r from-blue-500 to-purple-500 text-white"
+                : "text-gray-600"
             }`}
           >
             Sign In
@@ -111,15 +119,15 @@ const AuthPage = () => {
             onClick={() => setIsSignup(true)}
             className={`flex-1 py-2 rounded-full text-sm font-semibold transition ${
               isSignup
-                ? "bg-gradient-to-r from-pink-400 to-purple-400 text-white shadow-md"
-                : "text-gray-600 hover:text-gray-900"
+                ? "bg-gradient-to-r from-pink-400 to-purple-400 text-white"
+                : "text-gray-600"
             }`}
           >
             Sign Up
           </button>
         </div>
 
-        <h2 className="text-2xl md:text-3xl font-extrabold text-center mb-6 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 bg-clip-text text-transparent">
+        <h2 className="text-3xl font-extrabold text-center mb-6">
           {isSignup ? "Create Account" : "Welcome Back"}
         </h2>
 
@@ -127,96 +135,36 @@ const AuthPage = () => {
           <motion.form
             key={isSignup ? "signup" : "signin"}
             onSubmit={handleSubmit}
-            initial={{ opacity: 0, x: isSignup ? 30 : -30 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: isSignup ? -30 : 30 }}
-            transition={{ duration: 0.4, ease: "easeOut" }}
             className="flex flex-col space-y-4"
           >
             {isSignup && (
               <>
-                <input
-                  type="text"
-                  name="fullName"
-                  value={formData.fullName}
-                  onChange={handleChange}
-                  placeholder="Full Name"
-                  required
-                  className="px-4 py-3 rounded-xl bg-gray-50 border"
-                />
-                <input
-                  type="text"
-                  name="username"
-                  value={formData.username}
-                  onChange={handleChange}
-                  placeholder="Username"
-                  required
-                  className="px-4 py-3 rounded-xl bg-gray-50 border"
-                />
-                <input
-                  type="text"
-                  name="address"
-                  value={formData.address}
-                  onChange={handleChange}
-                  placeholder="Address"
-                  required
-                  className="px-4 py-3 rounded-xl bg-gray-50 border"
-                />
+                <input name="fullName" value={formData.fullName} onChange={handleChange} placeholder="Full Name" required />
+                <input name="username" value={formData.username} onChange={handleChange} placeholder="Username" required />
+                <input name="address" value={formData.address} onChange={handleChange} placeholder="Address" required />
               </>
             )}
 
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="Email"
-              required
-              className="px-4 py-3 rounded-xl bg-gray-50 border"
-            />
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              placeholder="Password"
-              required
-              className="px-4 py-3 rounded-xl bg-gray-50 border"
-            />
+            <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="Email" required />
+            <input type="password" name="password" value={formData.password} onChange={handleChange} placeholder="Password" required />
 
             {isSignup && (
-              <input
-                type="password"
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                placeholder="Confirm Password"
-                required
-                className="px-4 py-3 rounded-xl bg-gray-50 border"
-              />
+              <input type="password" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} placeholder="Confirm Password" required />
             )}
 
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              type="submit"
-              className="px-6 py-3 mt-4 text-white font-semibold rounded-full bg-gradient-to-r from-pink-400 via-purple-400 to-blue-400 shadow-lg hover:shadow-xl transition-transform duration-300"
-            >
+            <button type="submit" className="px-6 py-3 mt-4 text-white rounded-full bg-gradient-to-r from-pink-400 to-blue-400">
               {isSignup ? "Sign Up" : "Sign In"}
-            </motion.button>
+            </button>
           </motion.form>
         </AnimatePresence>
       </motion.div>
 
-      {/* Admin Floating Button */}
-      <motion.button
+      <button
         onClick={() => navigate("/admin-login")}
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.95 }}
-        className="fixed bottom-6 right-6 px-4 py-2 bg-gradient-to-r from-pink-300 via-purple-300 to-blue-300 text-gray-900 rounded-full shadow-lg hover:shadow-xl transition-all z-50 backdrop-blur-sm"
+        className="fixed bottom-6 right-6 px-4 py-2 bg-gradient-to-r from-pink-300 to-blue-300 rounded-full shadow-lg"
       >
         Admin
-      </motion.button>
+      </button>
     </div>
   );
 };
