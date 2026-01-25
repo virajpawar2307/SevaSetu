@@ -7,7 +7,7 @@ import { API_ENDPOINTS } from "../config/api";
 
 const AuthPage = () => {
   const [isSignup, setIsSignup] = useState(true);
-  const [loading, setLoading] = useState(false); // 🔥 added
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -25,68 +25,49 @@ const AuthPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (loading) return; // 🔒 prevent double click
-    setLoading(true);
+
+    if (loading) return;
 
     if (isSignup && formData.password !== formData.confirmPassword) {
-      setLoading(false);
       return toast.error("Passwords do not match");
     }
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000); // 15 sec timeout
+
     try {
-      // =========================
-      // ✅ SIGNUP FLOW
-      // =========================
-      if (isSignup) {
-        const res = await fetch(API_ENDPOINTS.REGISTER, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+      setLoading(true);
+
+      const url = isSignup ? API_ENDPOINTS.REGISTER : API_ENDPOINTS.LOGIN;
+
+      const body = isSignup
+        ? {
             fullName: formData.fullName,
             username: formData.username,
             email: formData.email,
             password: formData.password,
             address: formData.address,
-          }),
-        });
+          }
+        : {
+            email: formData.email,
+            password: formData.password,
+          };
 
-        const data = await res.json();
-
-        if (!res.ok) throw new Error(data.message || "Signup failed");
-
-        // Backend already returns token ✅
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("user", JSON.stringify(data.user));
-
-        toast.success(isSignup ? "✅ Account created!" : "✅ Logged in!");
-
-setTimeout(() => {
-  navigate("/dashboard");
-}, 800); // wait 0.8 sec so toast is visible
-
-        setLoading(false);
-        return;
-      }
-
-      // =========================
-      // ✅ LOGIN FLOW
-      // =========================
-      const res = await fetch(API_ENDPOINTS.LOGIN, {
+      const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-        }),
+        body: JSON.stringify(body),
+        signal: controller.signal,
       });
 
       const data = await res.json();
 
-      if (!res.ok) throw new Error(data.message || "Login failed");
+      if (!res.ok) {
+        throw new Error(data.message || "Request failed");
+      }
 
-      // Admin login blocked here
-      if (data.user.isAdmin) {
-        setLoading(false);
+      // ❌ Block admin login on user page
+      if (!isSignup && data.user.isAdmin) {
         toast.error("❌ Admin cannot login here! Use Admin Login page.");
         return;
       }
@@ -94,13 +75,22 @@ setTimeout(() => {
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
 
-      toast.success("✅ Logged in!");
-      navigate("/dashboard");
-      setLoading(false);
+      toast.success(isSignup ? "✅ Account created!" : "✅ Logged in!");
+
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 800);
     } catch (err) {
       console.error("Auth error:", err);
-      toast.error(err.message);
-      setLoading(false);
+
+      if (err.name === "AbortError") {
+        toast.error("⏱️ Server is waking up. Try again in 10 seconds.");
+      } else {
+        toast.error(err.message || "Network error");
+      }
+    } finally {
+      clearTimeout(timeout);
+      setLoading(false); // ✅ GUARANTEED RESET
     }
   };
 
@@ -165,9 +155,9 @@ setTimeout(() => {
           >
             {isSignup && (
               <>
-                <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} placeholder="Full Name" required className="px-4 py-3 rounded-xl bg-gray-50 border" />
-                <input type="text" name="username" value={formData.username} onChange={handleChange} placeholder="Username" required className="px-4 py-3 rounded-xl bg-gray-50 border" />
-                <input type="text" name="address" value={formData.address} onChange={handleChange} placeholder="Address" required className="px-4 py-3 rounded-xl bg-gray-50 border" />
+                <input name="fullName" value={formData.fullName} onChange={handleChange} placeholder="Full Name" required className="px-4 py-3 rounded-xl bg-gray-50 border" />
+                <input name="username" value={formData.username} onChange={handleChange} placeholder="Username" required className="px-4 py-3 rounded-xl bg-gray-50 border" />
+                <input name="address" value={formData.address} onChange={handleChange} placeholder="Address" required className="px-4 py-3 rounded-xl bg-gray-50 border" />
               </>
             )}
 
