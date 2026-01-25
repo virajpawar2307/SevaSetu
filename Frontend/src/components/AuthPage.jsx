@@ -7,7 +7,7 @@ import { API_ENDPOINTS } from "../config/api";
 
 const AuthPage = () => {
   const [isSignup, setIsSignup] = useState(true);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false); // 🔥 added
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -22,77 +22,76 @@ const AuthPage = () => {
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  if (loading) return;
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  if (isSignup && formData.password !== formData.confirmPassword) {
+    return toast.error("Passwords do not match");
+  }
 
-    if (loading) return;
+  try {
+    setLoading(true);
 
-    if (isSignup && formData.password !== formData.confirmPassword) {
-      return toast.error("Passwords do not match");
+    const url = isSignup ? API_ENDPOINTS.REGISTER : API_ENDPOINTS.LOGIN;
+
+    const body = isSignup
+      ? {
+          fullName: formData.fullName,
+          username: formData.username,
+          email: formData.email,
+          password: formData.password,
+          address: formData.address,
+        }
+      : {
+          email: formData.email,
+          password: formData.password,
+        };
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    // 🔥 HANDLE 204 NO CONTENT
+    if (res.status === 204) {
+      toast.success(isSignup ? "✅ Account created!" : "✅ Logged in!");
+      navigate("/dashboard");
+      return;
     }
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000); // 15 sec timeout
+    // 🔥 SAFELY TRY TO PARSE JSON
+    let data = {};
+    const text = await res.text();
+    if (text) data = JSON.parse(text);
 
-    try {
-      setLoading(true);
+    if (!res.ok) {
+      throw new Error(data.message || "Request failed");
+    }
 
-      const url = isSignup ? API_ENDPOINTS.REGISTER : API_ENDPOINTS.LOGIN;
+    // ❌ Block admin login here
+    if (!isSignup && data.user?.isAdmin) {
+      toast.error("❌ Admin cannot login here! Use Admin Login page.");
+      return;
+    }
 
-      const body = isSignup
-        ? {
-            fullName: formData.fullName,
-            username: formData.username,
-            email: formData.email,
-            password: formData.password,
-            address: formData.address,
-          }
-        : {
-            email: formData.email,
-            password: formData.password,
-          };
-
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-        signal: controller.signal,
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.message || "Request failed");
-      }
-
-      // ❌ Block admin login on user page
-      if (!isSignup && data.user.isAdmin) {
-        toast.error("❌ Admin cannot login here! Use Admin Login page.");
-        return;
-      }
-
+    if (data.token) {
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
-
-      toast.success(isSignup ? "✅ Account created!" : "✅ Logged in!");
-
-      setTimeout(() => {
-        navigate("/dashboard");
-      }, 800);
-    } catch (err) {
-      console.error("Auth error:", err);
-
-      if (err.name === "AbortError") {
-        toast.error("⏱️ Server is waking up. Try again in 10 seconds.");
-      } else {
-        toast.error(err.message || "Network error");
-      }
-    } finally {
-      clearTimeout(timeout);
-      setLoading(false); // ✅ GUARANTEED RESET
     }
-  };
+
+    toast.success(isSignup ? "✅ Account created!" : "✅ Logged in!");
+
+    navigate("/dashboard");
+  } catch (err) {
+    console.error("Auth error:", err);
+    toast.error(err.message || "Network error");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="relative min-h-screen flex items-center justify-center px-4">
@@ -155,9 +154,9 @@ const AuthPage = () => {
           >
             {isSignup && (
               <>
-                <input name="fullName" value={formData.fullName} onChange={handleChange} placeholder="Full Name" required className="px-4 py-3 rounded-xl bg-gray-50 border" />
-                <input name="username" value={formData.username} onChange={handleChange} placeholder="Username" required className="px-4 py-3 rounded-xl bg-gray-50 border" />
-                <input name="address" value={formData.address} onChange={handleChange} placeholder="Address" required className="px-4 py-3 rounded-xl bg-gray-50 border" />
+                <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} placeholder="Full Name" required className="px-4 py-3 rounded-xl bg-gray-50 border" />
+                <input type="text" name="username" value={formData.username} onChange={handleChange} placeholder="Username" required className="px-4 py-3 rounded-xl bg-gray-50 border" />
+                <input type="text" name="address" value={formData.address} onChange={handleChange} placeholder="Address" required className="px-4 py-3 rounded-xl bg-gray-50 border" />
               </>
             )}
 
