@@ -7,6 +7,7 @@ import { API_ENDPOINTS } from "../config/api";
 
 const AuthPage = () => {
   const [isSignup, setIsSignup] = useState(true);
+  const [loading, setLoading] = useState(false); // 🔥 added
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -24,41 +25,64 @@ const AuthPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loading) return; // 🔒 prevent double click
+    setLoading(true);
 
     if (isSignup && formData.password !== formData.confirmPassword) {
+      setLoading(false);
       return toast.error("Passwords do not match");
     }
 
     try {
-      const url = isSignup
-        ? API_ENDPOINTS.REGISTER
-        : API_ENDPOINTS.LOGIN;
-
-      const body = isSignup
-        ? {
+      // =========================
+      // ✅ SIGNUP FLOW
+      // =========================
+      if (isSignup) {
+        const res = await fetch(API_ENDPOINTS.REGISTER, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
             fullName: formData.fullName,
             username: formData.username,
             email: formData.email,
             password: formData.password,
             address: formData.address,
-          }
-        : {
-            email: formData.email,
-            password: formData.password,
-          };
+          }),
+        });
 
-      const res = await fetch(url, {
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.message || "Signup failed");
+
+        // Backend already returns token ✅
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("user", JSON.stringify(data.user));
+
+        toast.success("✅ Account created & logged in!");
+        navigate("/dashboard");
+        setLoading(false);
+        return;
+      }
+
+      // =========================
+      // ✅ LOGIN FLOW
+      // =========================
+      const res = await fetch(API_ENDPOINTS.LOGIN, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
       });
 
       const data = await res.json();
 
-      if (!res.ok) throw new Error(data.message || "Something went wrong");
+      if (!res.ok) throw new Error(data.message || "Login failed");
 
-      // Admin login blocked on user page
-      if (!isSignup && data.user.isAdmin) {
+      // Admin login blocked here
+      if (data.user.isAdmin) {
+        setLoading(false);
         toast.error("❌ Admin cannot login here! Use Admin Login page.");
         return;
       }
@@ -66,11 +90,13 @@ const AuthPage = () => {
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
 
-      toast.success(isSignup ? "✅ Account created!" : "✅ Logged in!");
-      navigate(isSignup ? "/dashboard" : "/dashboard"); // redirect to user dashboard
+      toast.success("✅ Logged in!");
+      navigate("/dashboard");
+      setLoading(false);
     } catch (err) {
       console.error("Auth error:", err);
       toast.error(err.message);
+      setLoading(false);
     }
   };
 
@@ -135,80 +161,32 @@ const AuthPage = () => {
           >
             {isSignup && (
               <>
-                <input
-                  type="text"
-                  name="fullName"
-                  value={formData.fullName}
-                  onChange={handleChange}
-                  placeholder="Full Name"
-                  required
-                  className="px-4 py-3 rounded-xl bg-gray-50 border"
-                />
-                <input
-                  type="text"
-                  name="username"
-                  value={formData.username}
-                  onChange={handleChange}
-                  placeholder="Username"
-                  required
-                  className="px-4 py-3 rounded-xl bg-gray-50 border"
-                />
-                <input
-                  type="text"
-                  name="address"
-                  value={formData.address}
-                  onChange={handleChange}
-                  placeholder="Address"
-                  required
-                  className="px-4 py-3 rounded-xl bg-gray-50 border"
-                />
+                <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} placeholder="Full Name" required className="px-4 py-3 rounded-xl bg-gray-50 border" />
+                <input type="text" name="username" value={formData.username} onChange={handleChange} placeholder="Username" required className="px-4 py-3 rounded-xl bg-gray-50 border" />
+                <input type="text" name="address" value={formData.address} onChange={handleChange} placeholder="Address" required className="px-4 py-3 rounded-xl bg-gray-50 border" />
               </>
             )}
 
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="Email"
-              required
-              className="px-4 py-3 rounded-xl bg-gray-50 border"
-            />
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              placeholder="Password"
-              required
-              className="px-4 py-3 rounded-xl bg-gray-50 border"
-            />
+            <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="Email" required className="px-4 py-3 rounded-xl bg-gray-50 border" />
+            <input type="password" name="password" value={formData.password} onChange={handleChange} placeholder="Password" required className="px-4 py-3 rounded-xl bg-gray-50 border" />
 
             {isSignup && (
-              <input
-                type="password"
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                placeholder="Confirm Password"
-                required
-                className="px-4 py-3 rounded-xl bg-gray-50 border"
-              />
+              <input type="password" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} placeholder="Confirm Password" required className="px-4 py-3 rounded-xl bg-gray-50 border" />
             )}
 
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               type="submit"
+              disabled={loading}
               className="px-6 py-3 mt-4 text-white font-semibold rounded-full bg-gradient-to-r from-pink-400 via-purple-400 to-blue-400 shadow-lg hover:shadow-xl transition-transform duration-300"
             >
-              {isSignup ? "Sign Up" : "Sign In"}
+              {loading ? "Please wait..." : isSignup ? "Sign Up" : "Sign In"}
             </motion.button>
           </motion.form>
         </AnimatePresence>
       </motion.div>
 
-      {/* Admin Floating Button */}
       <motion.button
         onClick={() => navigate("/admin-login")}
         whileHover={{ scale: 1.1 }}
