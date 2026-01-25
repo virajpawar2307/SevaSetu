@@ -4,11 +4,25 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false, // MUST be false for port 587
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
+    pass: process.env.EMAIL_PASS, // Gmail App Password
   },
+  tls: {
+    rejectUnauthorized: false,
+  },
+});
+
+// Test connection
+transporter.verify((err, success) => {
+  if (err) {
+    console.error("❌ Mail server connection failed:", err);
+  } else {
+    console.log("✅ Mail server is ready to send emails");
+  }
 });
 
 export const sendEmail = async (to, subject, html) => {
@@ -21,6 +35,6 @@ export const sendEmail = async (to, subject, html) => {
     });
     console.log(`📧 Email sent to ${to}`);
   } catch (error) {
-    console.error("❌ Error sending email:", error.message);
+    console.error("❌ Error sending email:", error);
   }
 };
