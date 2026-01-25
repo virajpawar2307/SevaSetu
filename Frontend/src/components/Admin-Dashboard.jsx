@@ -81,48 +81,50 @@ const AdminDashboard = () => {
 
   // ✅ UPDATE STATUS
   const handleUpdate = async (reportId) => {
-    if (!statusUpdate) {
-      toast.error("Status is required!");
-      return;
+  if (!statusUpdate) {
+    toast.error("Status is required!");
+    return;
+  }
+
+  try {
+    const token = localStorage.getItem("token");
+
+    const res = await fetch(API_ENDPOINTS.COMPLAINT_BY_ID(reportId), {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        status: statusUpdate,
+        adminMessage: adminMessageUpdate,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      toast.success("Report updated successfully!");
+
+      // 🔥 Force fresh data from DB
+      await fetchComplaints();
+
+      // 🔥 Close edit modal
+      setEditingReport(null);
+      setStatusUpdate("");
+      setAdminMessageUpdate("");
+
+      // 🔥 DO NOT change filter here
+      // User can manually click tab
+    } else {
+      toast.error(data.message || "Update failed");
     }
+  } catch (err) {
+    console.error(err);
+    toast.error("Server error");
+  }
+};
 
-    try {
-      const token = localStorage.getItem("token");
-
-      const res = await fetch(API_ENDPOINTS.COMPLAINT_BY_ID(reportId), {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          status: statusUpdate,
-          adminMessage: adminMessageUpdate,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        toast.success("Report updated successfully!");
-
-        // 🔥 Re-fetch from server
-        await fetchComplaints();
-
-        setEditingReport(null);
-        setStatusUpdate("");
-        setAdminMessageUpdate("");
-
-        // Optional: auto switch tab
-        setFilter(statusUpdate);
-      } else {
-        toast.error(data.message || "Update failed");
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error("Server error");
-    }
-  };
 
   // ✅ DELETE
   const handleDelete = async (reportId) => {
