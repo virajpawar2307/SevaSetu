@@ -41,7 +41,11 @@ export const register = async (req, res) => {
     const user = new User({ fullName, username, email, password, address });
     await user.save();
 
-    await sendEmail(user.email, "Welcome", "Welcome to SevaSetu");
+   try {
+  await sendEmail(user.email, "Welcome", "Welcome to SevaSetu");
+} catch (err) {
+  console.error("⚠️ Email failed, ignoring:", err.message);
+}
 
     const token = createToken(user);
     console.log("✅ User registered:", email);
