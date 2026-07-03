@@ -31,7 +31,7 @@ app.get("/", (req, res) => {
 });
 
 // ===================== HEALTH CHECK =====================
-app.get("/health2", (req, res) => {
+app.get("/health", (req, res) => {
   res.status(200).json({
     success: true,
     status: "UP",
@@ -43,13 +43,6 @@ app.get("/health2", (req, res) => {
   });
 });
 
-app.get("/health", (req, res) => {
-  res.json({
-    readyState: mongoose.connection.readyState,
-    database:
-      mongoose.connection.readyState === 1 ? "Connected" : "Disconnected",
-  });
-});
 
 
 // This tests if User collection queries work
