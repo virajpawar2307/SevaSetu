@@ -33,7 +33,7 @@ const AdminLogin = () => {
       localStorage.setItem("user", JSON.stringify(data.user));
 
       toast.success("✅ Logged in as Admin!");
-      navigate("/admin-dashboard");
+      navigate("/admin-dashboard", { replace: true });
     } catch (err) {
       console.error("Admin login error:", err);
       toast.error(err.message);

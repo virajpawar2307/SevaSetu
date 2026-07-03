@@ -11,6 +11,7 @@ import IssueReportPage from "./components/IssueReportPage";
 import MyReports from "./components/My-reports";
 import AdminLogin from "./components/AdminLogin"; // Admin Login
 import AdminDashboard from "./components/Admin-Dashboard"; // Admin Dashboard
+import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
   return (
@@ -23,20 +24,46 @@ function App() {
           {/* Authentication */}
           <Route path="/auth" element={<AuthPage />} />
 
-          {/* User Dashboard */}
-          <Route path="/dashboard" element={<UserDashboard />} />
+        <Route
+  path="/dashboard"
+  element={
+    <ProtectedRoute>
+      <UserDashboard />
+    </ProtectedRoute>
+  }
+/>
 
-          {/* Issue Reporting Page */}
-          <Route path="/report" element={<IssueReportPage />} />
+<Route
+  path="/report"
+  element={
+    <ProtectedRoute>
+      <IssueReportPage />
+    </ProtectedRoute>
+  }
+/>
 
-          {/* User's Reported Issues */}
-          <Route path="/My-reports" element={<MyReports />} />
+<Route
+  path="/My-reports"
+  element={
+    <ProtectedRoute>
+      <MyReports />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/admin-dashboard"
+  element={
+    <ProtectedRoute adminOnly>
+      <AdminDashboard />
+    </ProtectedRoute>
+  }
+/>
 
           {/* Admin Login */}
           <Route path="/admin-login" element={<AdminLogin />} />
 
-          {/* Admin Dashboard */}
-          <Route path="/admin-dashboard" element={<AdminDashboard />} />
+          
 
           {/* Catch-all route */}
           <Route path="*" element={<Frontpage />} />

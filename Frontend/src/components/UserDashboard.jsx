@@ -69,10 +69,16 @@ const UserDashboard = () => {
     navigate("/report", { state: { selectedCategory: catName } });
   };
 
-  const handleSignOut = () => {
-    toast.success("Signed out successfully!");
-    setTimeout(() => navigate("/"), 800);
-  };
+const handleSignOut = () => {
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+
+  toast.success("Signed out successfully!");
+
+  setTimeout(() => {
+    navigate("/", { replace: true });
+  }, 800);
+};
 
   const handleReportedIssues = () => {
     navigate("/My-reports");

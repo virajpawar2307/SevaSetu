@@ -83,7 +83,7 @@ const handleSubmit = async (e) => {
 
     toast.success(isSignup ? "✅ Account created!" : "✅ Logged in!");
 
-    navigate("/dashboard");
+    navigate("/dashboard", { replace: true });
   } catch (err) {
     console.error("Auth error:", err);
     toast.error(err.message || "Network error");
