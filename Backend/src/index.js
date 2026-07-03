@@ -30,6 +30,20 @@ app.get("/", (req, res) => {
   res.send("Backend is running 🚀");
 });
 
+// ===================== HEALTH CHECK =====================
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    success: true,
+    status: "UP",
+    message: "Backend is healthy",
+    database:
+      mongoose.connection.readyState === 1 ? "Connected" : "Disconnected",
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+  });
+});
+
+
 // This tests if User collection queries work
 import User from "./model/user.model.js";
 app.get("/test-user-query", async (req, res) => {
