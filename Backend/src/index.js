@@ -31,7 +31,7 @@ app.get("/", (req, res) => {
 });
 
 // ===================== HEALTH CHECK =====================
-app.get("/health", (req, res) => {
+app.get("/health2", (req, res) => {
   res.status(200).json({
     success: true,
     status: "UP",
@@ -40,6 +40,14 @@ app.get("/health", (req, res) => {
       mongoose.connection.readyState === 1 ? "Connected" : "Disconnected",
     uptime: process.uptime(),
     timestamp: new Date().toISOString(),
+  });
+});
+
+app.get("/health", (req, res) => {
+  res.json({
+    readyState: mongoose.connection.readyState,
+    database:
+      mongoose.connection.readyState === 1 ? "Connected" : "Disconnected",
   });
 });
 
